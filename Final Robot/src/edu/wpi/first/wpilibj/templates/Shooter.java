@@ -10,16 +10,18 @@ import edu.wpi.first.wpilibj.can.CANTimeoutException;
  * This class runs the shooter, shooter lift, cam, and the optional limit switches
  * monitoring the orientation of the bottom frisbee in the shooter and the height
  * of the shooter
- * 
+    Victor cam; * 
  * @author Andrew Vitkus
  */
 public class Shooter {
-    CANJaguar shooterWheel;
+    CANJaguar shooterWheel1;
+    CANJaguar shooterWheel2;
     DigitalInput topLimit;
     DigitalInput bottomLimit;
     DigitalInput frisbeeSideCheck;
     Victor lift;
     Victor cam;
+
     
     boolean topSafe;
     boolean bottomSafe;
@@ -38,19 +40,28 @@ public class Shooter {
      * @param camPort the PWM port the Victor running the cam is attached to
      * @param liftPort the PWM port the Victor running the lift is attached to
      */
-    public Shooter(int shooterPort, int camPort, int liftPort) {
+    public Shooter(int shooterPort1, int shooterPort2, int camPort, int liftPort) {
         try {
-            shooterWheel = new CANJaguar(shooterPort);  // initalize the jag running the shooter
-            shooterWheel.configNeutralMode(CANJaguar.NeutralMode.kCoast);   // force the jag to coast
-            shooterWheel.changeControlMode(CANJaguar.ControlMode.kPercentVbus); // set the jag to run %Vbus control
-            shooterWheel.setPID(1, .01, .1);    // P=1, I=0.01, D=0.1
-            shooterWheel.enableControl();   // make the jag use the closed loop controller
+            shooterWheel1 = new CANJaguar(shooterPort1);  // initalize the jag running the shooter
+            shooterWheel1.configNeutralMode(CANJaguar.NeutralMode.kCoast);   // force the jag to coast
+            shooterWheel1.changeControlMode(CANJaguar.ControlMode.kPercentVbus); // set the jag to run %Vbus control
+            shooterWheel1.setPID(1, .01, .1);    // P=1, I=0.01, D=0.1
+            shooterWheel1.enableControl();   // make the jag use the closed loop controller
+            
+            shooterWheel2 = new CANJaguar(shooterPort2);  // initalize the jag running the shooter
+            shooterWheel2.configNeutralMode(CANJaguar.NeutralMode.kCoast);   // force the jag to coast
+            shooterWheel2.changeControlMode(CANJaguar.ControlMode.kPercentVbus); // set the jag to run %Vbus control
+            shooterWheel2.setPID(1, .01, .1);    // P=1, I=0.01, D=0.1
+            shooterWheel2.enableControl();   // make the jag use the closed loop controller
         } catch (CANTimeoutException ex) {
             ex.printStackTrace();
         }
         
         lift = new Victor(liftPort);    // initalize the victor running the lift
         cam = new Victor(camPort);  // initalize the victor running the cam
+        
+        stopLift();
+        cam.set(0);
         
         setValue = 0;   // set the shooter wheel speed to 0
         
@@ -67,27 +78,10 @@ public class Shooter {
      * @param liftPort the PWM port the Victor running the lift is attached to
      * @param frisbeeSideCheckPort the DIO port the limit switch checking the frisbee orientation is attached to
      */
-    public Shooter(int shooterPort, int camPort, int liftPort, int frisbeeSideCheckPort) {
-        try {
-            shooterWheel = new CANJaguar(shooterPort);  // initalize the jag running the shooter
-            shooterWheel.configNeutralMode(CANJaguar.NeutralMode.kCoast);   // force the jag to coast
-            shooterWheel.changeControlMode(CANJaguar.ControlMode.kPercentVbus); // set the jag to run %Vbus control
-            shooterWheel.setPID(1, .01, .1);    // P=1, I=0.01, D=0.1
-            shooterWheel.enableControl();   // make the jag use the closed loop controller
-        } catch (CANTimeoutException ex) {
-            ex.printStackTrace();
-        }
-        
-        lift = new Victor(liftPort);    // initalize the victor running the lift
-        cam = new Victor(camPort);  // initalize the victor running the cam
+    public Shooter(int shooterPort1, int shooterPort2, int camPort, int liftPort, int frisbeeSideCheckPort) {
+        this(shooterPort1, shooterPort2, camPort, liftPort);
         
         frisbeeSideCheck = new DigitalInput(frisbeeSideCheckPort);  // initalize the limit switch checking the frisbee orientation in the shooter
-        
-        setValue = 0;   // set the shooter wheel speed to 0
-        
-        topSafe = true; // assume the shooter is not at the max height
-        bottomSafe = true;  // assume the shooter is not at the minimum height
-        shooting = false;   // assume that the shooter is not shooting
         
         startFrisbeeWatcher();  // start the thread to monitor the frisbee orientation
     }
@@ -102,26 +96,11 @@ public class Shooter {
      * @param topLimitPort the DIO port that the limit switch checking the maximum height of the shooter is attached to
      * @param bottomLimitPort the DIO port that the limit switch checking the minimum height of the shooter is attached to
      */
-    public Shooter(int shooterPort, int camPort, int liftPort, int topLimitPort, int bottomLimitPort) {
-        try {
-            shooterWheel = new CANJaguar(shooterPort);  // initalize the jag running the shooter
-            shooterWheel.configNeutralMode(CANJaguar.NeutralMode.kCoast);   // force the jag to coast
-            shooterWheel.changeControlMode(CANJaguar.ControlMode.kPercentVbus); // set the jag to run %Vbus control
-            shooterWheel.setPID(1, .01, .1);    // P=1, I=0.01, D=0.1
-            shooterWheel.enableControl();   // make the jag use the closed loop controller
-        } catch (CANTimeoutException ex) {
-            ex.printStackTrace();
-        }
-        
-        lift = new Victor(liftPort);    // initalize the victor running the lift
-        cam = new Victor(camPort);  // initalize the victor running the cam
+    public Shooter(int shooterPort1, int shooterPort2, int camPort, int liftPort, int topLimitPort, int bottomLimitPort) {
+        this(shooterPort1, shooterPort2, camPort, liftPort);
         
         topLimit = new DigitalInput(topLimitPort);  // initalize the limit switch watching the max height of the shooter
         bottomLimit = new DigitalInput(bottomLimitPort);    // initalize the limit swtich watching the minimum height of the shooter
-        
-        setValue = 0;   // set the shooter wheel speed to 0
-        
-        shooting = false;   // assume that we are not shooting
         
         startLimitWatcher();    // start the shooter lift height watcher
     }
@@ -137,25 +116,12 @@ public class Shooter {
      * @param bottomLimitPort the DIO port that the limit switch checking the minimum height of the shooter is attached to
      * @param frisbeeSideCheckPort the DIO port the limit switch checking the frisbee orientation is attached to
      */
-    public Shooter(int shooterPort, int camPort, int liftPort, int topLimitPort, int bottomLimitPort, int frisbeeSideCheckPort) {
-        try {
-            shooterWheel = new CANJaguar(shooterPort);  // initalize the jag running the shooter
-            shooterWheel.configNeutralMode(CANJaguar.NeutralMode.kCoast);   // force the jag to coast
-            shooterWheel.changeControlMode(CANJaguar.ControlMode.kPercentVbus); // set the jag to run %Vbus control
-            shooterWheel.setPID(1, .01, .1);    // P=1, I=0.01, D=0.1
-            shooterWheel.enableControl();   // make the jag use the closed loop controller
-        } catch (CANTimeoutException ex) {
-            ex.printStackTrace();
-        }
-        
-        lift = new Victor(liftPort);    // initalize the victor running the lift
-        cam = new Victor(camPort);  // initalize the victor running the cam
+    public Shooter(int shooterPort1, int shooterPort2, int camPort, int liftPort, int topLimitPort, int bottomLimitPort, int frisbeeSideCheckPort) {
+        this(shooterPort1, shooterPort2, camPort, liftPort);
         
         topLimit = new DigitalInput(topLimitPort);
         bottomLimit = new DigitalInput(bottomLimitPort);
         frisbeeSideCheck = new DigitalInput(frisbeeSideCheckPort);
-        
-        setValue = 0;   // set the shooter wheel speed to 0
         
         startLimitWatcher();    // start the thread to monitor the frisbee orientation
         startFrisbeeWatcher();  // start the shooter lift height watcher
@@ -221,6 +187,7 @@ public class Shooter {
     public void raise() {
         if (topSafe) {  // is it safe to move the shooter higher?
             if (lift.get() != -1) { // will the lift's speed even change?
+                System.out.println("Rasing shooter");
                 lift.set(-1);   // if so, raise the lift
             } 
         } else {    // if you cannot safely move higher, stop
@@ -235,6 +202,7 @@ public class Shooter {
     public void lower() {
         if (bottomSafe) {   // is it safe to move the shooter lower?
             if (lift.get() != 1) {  // will the lift's speed even change?
+                System.out.println("Lowering shooter");
                 lift.set(1);    // if so, lower the lift
             }
         } else {    // if you cannot safely move lower, stop
@@ -247,6 +215,7 @@ public class Shooter {
      */
     public void stopLift() {
         if (lift.get() != 0) {  // is the lift already stopped?
+            System.out.println("Stopping lift");
             lift.set(0);    // if not, stop it
         }
     }
@@ -263,8 +232,9 @@ public class Shooter {
             setValue = speed;   // if so, the target to the new value
             checkLimits();  // ensure the set value (speed) is wihin the limits
             try {
-                shooterWheel.setX(speed);   // set the shooter wheel to go at the set speed
-                System.out.println("Shooter speed: " + speed);
+                shooterWheel1.setX(setValue);   // set the shooter wheel's first motor to go at the set speed
+                shooterWheel2.setX(setValue);   // set the shooter wheel's second motor to go at the set speed
+                System.out.println("Shooter speed: " + setValue);
             } catch (CANTimeoutException ex) {
                 ex.printStackTrace();
             }
@@ -304,6 +274,7 @@ public class Shooter {
      * This method attempts a shot.
      */
     public void shoot() {
+        System.out.println("Shoot");
         shooting = true;    // record that a shot is being attempted
         Timer t = new Timer();
         cam.set(-1);    // rotate the cam to hit the frisbee

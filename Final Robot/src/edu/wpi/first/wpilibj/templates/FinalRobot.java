@@ -29,8 +29,11 @@ public class FinalRobot extends IterativeRobot {
     
     Lift lift;
     
+    PandaCom panda;
+    
     double teleopIterCount;
     double autoIterCount;
+    
     
     /**
      * This function is run when the robot is first started up and should be
@@ -38,25 +41,31 @@ public class FinalRobot extends IterativeRobot {
      */
     public void robotInit() {
         controller1 = new Joystick(1);  // first joystick setup as controller 1
-        drive = new CANDrive(1,2,3,4);  // setup drive train on CAN adresses 1, 2, 3, and 4
-        lift = new Lift(4, 3);           // setup frisbee lift with front polycord motor on PWM 1 and rear on PWM 2
-        shooter = new Shooter(5, 1, 2);    // setup shooter with wheel on CAN address 5, lift on PWM 3
+        drive = new CANDrive(3, 6, 2, 1);  // setup drive train on CAN adresses 1, 2, 3, and 4
+        lift = new Lift(3, 4, true);           // setup frisbee lift with front polycord motor on PWM 1 and rear on PWM 2, do use jaguars
+        shooter = new Shooter(4, 5, 1, 2);    // setup shooter with wheel on CAN address 5, lift on PWM 3
+        
         
         drive.setDeadBand(.1);  // sets the deadband of the drive train to .1
+        drive.setSafetyEnabled(false);
+        //drive.setExpiration(.5);
+        // start the thread watching for data from the PandaBoard.
         
-        PandaCom.monitor(); // start the thread watching for data from the PandaBoard
+        
+        panda = new PandaCom();
+        panda.monitor();
     }
     
     public void disabledInit() {
-        PandaCom.pauseMonitor();    // pauses the PandaBoard monitor
+        //panda.pauseMonitor();    // pauses the PandaBoard monitor
     }
     
     /**
      * This function is run when the robot first enters the autonomous period
      */
     public void autonomousInit() {
-        PandaCom.resumeMonitor();   // resume monitoring the PandBoard
-        drive.setControlMode(CANJaguar.ControlMode.kPosition);  // set the drive train to run based on position data
+        //panda.resumeMonitor();   // resume monitoring the PandBoard
+        //drive.setControlMode(CANJaguar.ControlMode.kPosition);  // set the drive train to run based on position data
         autoIterCount = 0;  // zero the autonomous iteration counter
     }
 
@@ -71,10 +80,10 @@ public class FinalRobot extends IterativeRobot {
      * This function is called when the robot first enters operator control
      */
     public void teleopInit() {
-        PandaCom.resumeMonitor();   // resume monitoring the PandaBoard
-        drive.setControlMode(CANJaguar.ControlMode.kPercentVbus );  // set the drive train to run based on %Vbus
+        //panda.resumeMonitor();   // resume monitoring the PandaBoard
+        //drive.setControlMode(CANJaguar.ControlMode.kPercentVbus );  // set the drive train to run based on %Vbus
         teleopIterCount = 0;    // zero the telop iteration counter
-        PandaCom.writeLine("This is text!");    // send some text to the PandaBoard to test things
+        //PandaCom.writeLine("This is text!");    // send some text to the PandaBoard to test things
     }
 
     /**

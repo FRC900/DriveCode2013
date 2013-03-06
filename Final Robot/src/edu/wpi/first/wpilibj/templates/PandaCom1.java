@@ -1,81 +1,66 @@
 package edu.wpi.first.wpilibj.templates;
 
-import com.sun.squawk.platform.posix.GCFSocketsImpl;
+import com.sun.cldc.jna.ptr.IntByReference;
+import com.sun.squawk.io.j2me.socket.Protocol;
+import com.sun.squawk.platform.posix.natives.Socket;
+//import com.sun.squawk.platform.posix.natives.SocketImpl;
+import com.sun.squawk.platform.posix.vxworks.natives.SocketImpl;
 import edu.wpi.first.wpilibj.networktables2.stream.SocketConnectionStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import javax.microedition.io.Connector;
-import javax.microedition.io.SocketConnection;
 
 /**
  *
  * @author Andrew Vitkus
  */
-public class PandaCom {
-
-    private SocketConnectionStream scs;
-    private GCFSocketsImpl socket;
-    private InputStreamReader isr;
-    private OutputStreamWriter osw;
+public class PandaCom1 {
+    
+    private Protocol socketProt;
+    private SocketImpl socket;
+    private int sockFD;
+    private DataInputStream dis;
+    private DataOutputStream dos;
     private StringBuffer lastInput; //Using StringBuffer instead of String because it is thread-safe
     private volatile boolean pause = false;
-    private boolean stop = false;
-
-    PandaCom() {
+    private volatile boolean stop = false;
+    
+    PandaCom1() {
         lastInput = new StringBuffer("");
 
         //startConnection();
     }
-
+    
     private boolean startConnection() {
         try {
-            if (scs != null) {
-                scs.close();
-                scs = null;
-            }
+            IntByReference addr = new IntByReference(0);
             
-            scs = new SocketConnectionStream("10.9.0.40", 1130);
+            socket.inet_pton("010.009.000.040", addr);
             
-            //SocketConnection socketConnection = (SocketConnection) Connector.open("socket://10.9.0.40:1130");
+            Socket.sockaddr_in sockaddr_in = new Socket.sockaddr_in();
+            sockaddr_in.sin_family = Socket.AF_INET;
+            sockaddr_in.sin_addr = addr.getValue();
+            sockaddr_in.sin_port = 1130;
+            sockaddr_in.sin_len = sockaddr_in.size();
             
-            InputStream is = scs.getInputStream();
-            OutputStream os = scs.getOutputStream();
-
-            if (isr != null) {
-                //try {
-                    isr.close();
-                    osw.close();
-                /*} catch (IOException ex) {
-                    ex.printStackTrace();
-                }*/
-            }
+            socket = new SocketImpl();
             
+            sockFD = socket.socket(Socket.AF_INET, Socket.SOCK_STREAM, 0);
+            socket.bind(sockFD, sockaddr_in, sockaddr_in.size());
+            socket.connect(sockFD, sockaddr_in, sockaddr_in.size());
+            socket.listen(sockFD, 1);
             
+            socketProt = new Protocol(sockFD);
             
-            isr = new InputStreamReader(is);
-            osw = new OutputStreamWriter(os);
-            //socketConnection.close();
+            dis = socketProt.openDataInputStream();
+            dos = socketProt.openDataOutputStream();
             
-            //System.out.println("Connection Successful!");
+            System.out.println("Connection Successful!");
+            
             return true;
         } catch (IOException ex) {
-            /*if (scs != null) {
-                scs.close();
-            }*/
-            scs = null;
-            
-            try {
-                socket = new GCFSocketsImpl();
-                socket.close(socket.open("10.9.0.40", 1130, SocketConnection.LINGER));
-            } catch (IOException ex1) {
-                ex1.printStackTrace();
-            } finally {
-                socket = null;
-            }
-            
             System.out.println("Connection Failed!");
             ex.printStackTrace();
             
@@ -91,7 +76,7 @@ public class PandaCom {
     public boolean monitor() {
         MonitorThread monitor = new MonitorThread();
         monitor.start();
-
+        
         return true;
     }
 
@@ -102,7 +87,7 @@ public class PandaCom {
      */
     public boolean recieving() {
         try {
-            return (isr.ready());
+            return (dis.available() > 0);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -121,16 +106,15 @@ public class PandaCom {
         }
         while (recieving()) {
             try {
-                char c = (char) isr.read();
-                //System.out.print(c);
-                str.append(c);
+                str.append(dis.readUTF());
+                System.out.print(str);
                 lastInput = str;
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
         }
         System.out.println();
-
+        
         if (lastInput != null) {
             return lastInput.toString();
         } else {
@@ -187,7 +171,7 @@ public class PandaCom {
      */
     public void writeLine(String line) {
         try {
-            osw.write(line, 0, line.length());
+            dos.writeUTF(line);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -206,9 +190,9 @@ public class PandaCom {
     public void resumeMonitor() {
         pause = false;
     }
-
+    
     private class MonitorThread extends Thread {
-
+        
         public void run() {
             while (!stop) {
                 if (pause) {
@@ -219,13 +203,24 @@ public class PandaCom {
                         ex.printStackTrace();
                     }
                 } else {
+                    /*try{
+                     SocketConnectionStream s = new SocketConnectionStream("10.9.0.40", 1130);
+                     System.out.println("Connected!");
+                     Thread.sleep(500);
+                     } catch (InterruptedException ex) {
+                     System.out.println("THREAADDDDDDD ERRRRORRRRRRRRRRRR");
+                     } catch(IOException e) {
+                     System.out.println("Failllllllllllllllllllllll");
+                        
+                     }
+                     */
                     if (startConnection()) {
                         boolean timedOut = false;
                         long time = System.currentTimeMillis();
-                        while(!recieving() && !timedOut) {
+                        while (!recieving() && !timedOut) {
                             timedOut = System.currentTimeMillis() - time > 500;
                             try {
-                                //System.out.println("Feed me");
+                                System.out.println("Feed me");
                                 Thread.sleep(50);
                             } catch (InterruptedException ex) {
                                 ex.printStackTrace();
@@ -233,16 +228,21 @@ public class PandaCom {
                         }
                         if (!timedOut) {
                             lastInput = new StringBuffer(readLine());
-                            System.out.println(lastInput);
+                            //System.out.println(lastInput);
+                        } else {
+                            System.out.println("Timed out");
                         }
                     }
                     try {
+                        System.out.println("Waiting...");
                         Thread.sleep(500);
+                        System.out.println("Done waiting!");
                     } catch (InterruptedException ex) {
                         ex.printStackTrace();
                     }
                 }
             }
+            System.out.println("Why is this done?");
         }
     }
 }

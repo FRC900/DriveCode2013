@@ -20,6 +20,28 @@ public class CANDrive {
     private RobotDrive drive;
     
     /**
+     * This creates a drive train controlled by 2 Jaguars on a CAN bus
+     * 
+     * @param left the CAN address of the Jaguar running the front left motor
+     * @param right the CAN address of the Jaguar running the front right motor
+     */
+    public CANDrive(int left, int right) {
+        try {
+            m_frontLeftMotor = new CANJaguar(left);    // initialize the jag running the front, left motor
+            m_frontRightMotor = new CANJaguar(right);  // initialize the jag running the front, right motor\
+            
+            m_frontLeftMotor.configNeutralMode(CANJaguar.NeutralMode.kBrake);   // force the jag to break
+            m_frontRightMotor.configNeutralMode(CANJaguar.NeutralMode.kBrake);  // force the jag to break
+
+            drive = new RobotDrive(m_frontLeftMotor, m_frontRightMotor); // setup a drivetrain with the CANJaguars
+        } catch (CANTimeoutException ex) {
+            ex.printStackTrace();
+        }
+        
+        deadBand = 0;   // default to having no deadspace from the controller inputs
+    }
+    
+    /**
      * This creates a drive train controlled by 4 Jaguars on a CAN bus
      * 
      * @param frontLeft the CAN address of the Jaguar running the front left motor
@@ -55,9 +77,11 @@ public class CANDrive {
     public void setControlMode(CANJaguar.ControlMode controlMode) {
         try {
             m_frontLeftMotor.changeControlMode(controlMode);    // set the control mode of the jag
-            m_rearLeftMotor.changeControlMode(controlMode); // set the control mode of the jag
             m_frontRightMotor.changeControlMode(controlMode);   // set the control mode of the jag
-            m_rearRightMotor.changeControlMode(controlMode);    // set the control mode of the jag
+            if (m_rearLeftMotor != null) {
+                m_rearLeftMotor.changeControlMode(controlMode); // set the control mode of the jag
+                m_rearRightMotor.changeControlMode(controlMode);    // set the control mode of the jag
+            }
         } catch (CANTimeoutException ex) {
             ex.printStackTrace();
         }

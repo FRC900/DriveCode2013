@@ -40,7 +40,7 @@ public class Lift {
         if (front.get() != 1) { // will the lift's speed change?
             System.out.println("Lift up");
             front.set(1);   // if so, make the front pull up
-            back.set(-.5);   // and make the back pull up
+            back.set(-1);   // and make the back pull up
         }
     }
     
@@ -51,7 +51,7 @@ public class Lift {
         if (front.get() != -1) {    // will the lift's speed change?
             System.out.println("Lift reverse");
             front.set(-1);  // if so, make the front push out
-            back.set(.5);    // and make the back push out
+            back.set(1);    // and make the back push out
         }
     }
     

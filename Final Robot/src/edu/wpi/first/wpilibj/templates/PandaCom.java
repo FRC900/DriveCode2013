@@ -192,6 +192,11 @@ public class PandaCom {
             ex.printStackTrace();
         }
     }
+    
+    public String requestLine() {
+        startConnection();
+        return readLine();
+    }
 
     /**
      * Pauses the PandaBoard monitor

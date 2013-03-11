@@ -46,7 +46,7 @@ public class FinalRobot extends IterativeRobot {
         controller1 = new Joystick(1);  // first joystick setup as controller 1
         drive = new CANDrive(3, 6, 2, 1, 1, 2, 3, 4);  // setup drive train on CAN adresses 1, 2, 3, and 4
         lift = new Lift(3, 2, true);           // setup frisbee lift with front polycord motor on PWM 1 and rear on PWM 2, do use jaguars
-        shooter = new Shooter(5, 4, 1, 7, 2, null);  // setup shooter with wheel on CAN address 5, lift on PWM 3
+        shooter = new Shooter(5, 4, 1, 7, 5, null);  // setup shooter with wheel on CAN address 5, lift on PWM 3
 
         dsLCD = DriverStationLCD.getInstance();
 
@@ -175,6 +175,7 @@ public class FinalRobot extends IterativeRobot {
         //panda.resumeMonitor();   // resume monitoring the PandaBoard
         drive.setTeleopMode();
         teleopIterCount = 0;    // zero the telop iteration counter
+        shooter.setLiftHeight(5);
         //PandaCom.writeLine("This is text!");    // send some text to the PandaBoard to test things
     }
 
@@ -208,19 +209,54 @@ public class FinalRobot extends IterativeRobot {
 
         if (teleopIterCount % 5 == 0) {
             if (controller1.getRawButton(5)) { // angle the shooter up if the left bumper is pressed
-                shooter.raise(1);
+                shooter.lower(.5);
+                try {
+                    System.out.println("Shooter voltage: " + shooter.shooterWheel1.getX());
+                    dsLCD.println(DriverStationLCD.Line.kUser1, 1, "Shooter voltage: " + shooter.shooterWheel1.getX());
+                    dsLCD.println(DriverStationLCD.Line.kUser2, 1, "Lift height: " + shooter.lift.getX());
+                    dsLCD.updateLCD();
+                } catch (CANTimeoutException ex) {
+                }
             } else if (controller1.getRawButton(6)) {   // angle the shooter down if the right bumper is pressed
-                shooter.lower(1);
+                shooter.raise(.5);
+                try {
+                    System.out.println("Shooter voltage: " + shooter.shooterWheel1.getX());
+                    dsLCD.println(DriverStationLCD.Line.kUser1, 1, "Shooter voltage: " + shooter.shooterWheel1.getX());
+                    dsLCD.println(DriverStationLCD.Line.kUser2, 1, "Lift height: " + shooter.lift.getX());
+                    dsLCD.updateLCD();
+                } catch (CANTimeoutException ex) {
+                }
             }/* else {    // if neither bumper is pressed stop angling the shooter
              shooter.stopLift();
              }*/
 
             if (controller1.getRawButton(8)) { // if right trigger is pressed, increase the shooter speed by 5% V-bus
-                shooter.raiseShooterSpeed(.1);
+                shooter.raiseShooterSpeed(.5);
+                try {
+                    System.out.println("Shooter voltage: " + shooter.shooterWheel1.getX());
+                    dsLCD.println(DriverStationLCD.Line.kUser1, 1, "Shooter voltage: " + shooter.shooterWheel1.getX());
+                    dsLCD.println(DriverStationLCD.Line.kUser2, 1, "Lift height: " + shooter.lift.getX());
+                    dsLCD.updateLCD();
+                } catch (CANTimeoutException ex) {
+                }
             } else if (controller1.getRawButton(7)) { // if left trigger is pressed, decrease the shooter speed by 5% V-bus
-                shooter.lowerShooterSpeed(.1);
+                shooter.lowerShooterSpeed(.5);
+                try {
+                    System.out.println("Shooter voltage: " + shooter.shooterWheel1.getX());
+                    dsLCD.println(DriverStationLCD.Line.kUser1, 1, "Shooter voltage: " + shooter.shooterWheel1.getX());
+                    dsLCD.println(DriverStationLCD.Line.kUser2, 1, "Lift height: " + shooter.lift.getX());
+                    dsLCD.updateLCD();
+                } catch (CANTimeoutException ex) {
+                }
             } else if (controller1.getRawButton(2)) { // if the B button is pressed, stop the shooter
                 shooter.stopShooter();
+                try {
+                    System.out.println("Shooter voltage: " + shooter.shooterWheel1.getX());
+                    dsLCD.println(DriverStationLCD.Line.kUser1, 1, "Shooter voltage: " + shooter.shooterWheel1.getX());
+                    dsLCD.println(DriverStationLCD.Line.kUser2, 1, "Lift height: " + shooter.lift.getX());
+                    dsLCD.updateLCD();
+                } catch (CANTimeoutException ex) {
+                }
             }
         }
 
@@ -232,13 +268,13 @@ public class FinalRobot extends IterativeRobot {
             shootFromInput();
         }
 
-        String set = Double.toString(shooter.setValue);
+       /* String set = Double.toString(shooter.setValue);
         String cur = "0";
         try {
             cur = Double.toString(shooter.shooterWheel1.getSpeed());
         } catch (CANTimeoutException ex) {
         }
-        System.out.println("Set: " + set.substring(0, Math.min(set.length(), 5)) + ", Cur: " + cur.substring(0, Math.min(cur.length(), 5)));
+        System.out.println("Set: " + set.substring(0, Math.min(set.length(), 5)) + ", Cur: " + cur.substring(0, Math.min(cur.length(), 5)));*/
 
 
         teleopIterCount++; // increments the teleop iteration counter

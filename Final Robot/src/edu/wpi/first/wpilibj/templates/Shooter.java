@@ -66,11 +66,12 @@ public class Shooter {
             lift = new CANJaguar(liftPort);    // initalize the victor running the lift
             lift.configNeutralMode(CANJaguar.NeutralMode.kBrake);   // force the jag to coast
             lift.changeControlMode(CANJaguar.ControlMode.kPosition); // set the jag to run %Vbus control
-            lift.configEncoderCodesPerRev(500);
             lift.setPositionReference(CANJaguar.PositionReference.kQuadEncoder);
-            lift.setSpeedReference(CANJaguar.SpeedReference.kQuadEncoder);
+            lift.configEncoderCodesPerRev(500);
+            lift.setSafetyEnabled(false);
             lift.setPID(500, 1, 10);    // P=1, I=0.01, D=0.1
             lift.enableControl(0);   // make the jag use the closed loop controller
+            lift.setX(0);
         } catch (CANTimeoutException ex) {
             ex.printStackTrace();
         }
@@ -189,6 +190,7 @@ public class Shooter {
      */
     public void raise(double dist) {
         try {
+            System.out.println("Raise lift");
             lift.setX(lift.getX() + dist);
         } catch (CANTimeoutException ex) {
         }
@@ -207,6 +209,7 @@ public class Shooter {
      */
     public void lower(double dist) {
         try {
+            System.out.println("Lower lift");
             lift.setX(lift.getX() - dist);
         } catch (CANTimeoutException ex) {
         }

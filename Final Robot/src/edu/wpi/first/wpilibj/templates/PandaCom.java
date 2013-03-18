@@ -36,37 +36,37 @@ public class PandaCom {
                 scs.close();
                 scs = null;
             }
-            
+
             scs = new SocketConnectionStream("10.9.0.40", 1130);
-            
+
             //SocketConnection socketConnection = (SocketConnection) Connector.open("socket://10.9.0.40:1130");
-            
+
             InputStream is = scs.getInputStream();
             OutputStream os = scs.getOutputStream();
 
             if (isr != null) {
                 //try {
-                    isr.close();
-                    osw.close();
+                isr.close();
+                osw.close();
                 /*} catch (IOException ex) {
-                    ex.printStackTrace();
-                }*/
+                 ex.printStackTrace();
+                 }*/
             }
-            
-            
-            
+
+
+
             isr = new InputStreamReader(is);
             osw = new OutputStreamWriter(os);
             //socketConnection.close();
-            
+
             //System.out.println("Connection Successful!");
             return true;
         } catch (IOException ex) {
             /*if (scs != null) {
-                scs.close();
-            }*/
+             scs.close();
+             }*/
             scs = null;
-            
+
             try {
                 socket = new GCFSocketsImpl();
                 socket.close(socket.open("10.9.0.40", 1130, SocketConnection.LINGER));
@@ -75,10 +75,10 @@ public class PandaCom {
             } finally {
                 socket = null;
             }
-            
+
             System.out.println("Connection Failed!");
             ex.printStackTrace();
-            
+
             return false;
         }
     }
@@ -100,34 +100,28 @@ public class PandaCom {
      *
      * @return is there a message?
      */
-    public boolean recieving() {
-        try {
-            return (isr.ready());
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-        return false;
+    public boolean recieving() throws IOException {
+        return (isr.ready());
     }
 
     /**
      * Reads a line from the socket
      *
      * @return the line read from the socket
+     * @throws IOException
      */
-    public String readLine() {
+    public String readLine() throws IOException {
         StringBuffer str = new StringBuffer();
         if (recieving()) {
             lastInput = null;
         }
         while (recieving()) {
-            try {
-                char c = (char) isr.read();
-                //System.out.print(c);
-                str.append(c);
-                lastInput = str;
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
+            int in = isr.read();
+            System.out.print(in + " ");
+            char c = (char) in;
+            //System.out.print(c);
+            str.append(c);
+            lastInput = str;
         }
         System.out.println();
 
@@ -192,8 +186,8 @@ public class PandaCom {
             ex.printStackTrace();
         }
     }
-    
-    public String requestLine() {
+
+    public String requestLine() throws IOException {
         startConnection();
         return readLine();
     }
@@ -225,20 +219,24 @@ public class PandaCom {
                     }
                 } else {
                     if (startConnection()) {
-                        boolean timedOut = false;
-                        long time = System.currentTimeMillis();
-                        while(!recieving() && !timedOut) {
-                            timedOut = System.currentTimeMillis() - time > 500;
-                            try {
-                                //System.out.println("Feed me");
-                                Thread.sleep(50);
-                            } catch (InterruptedException ex) {
-                                ex.printStackTrace();
+                        try {
+                            boolean timedOut = false;
+                            long time = System.currentTimeMillis();
+                            while (!recieving() && !timedOut) {
+                                timedOut = System.currentTimeMillis() - time > 500;
+                                try {
+                                    //System.out.println("Feed me");
+                                    Thread.sleep(50);
+                                } catch (InterruptedException ex) {
+                                    ex.printStackTrace();
+                                }
                             }
-                        }
-                        if (!timedOut) {
-                            lastInput = new StringBuffer(readLine());
-                            System.out.println(lastInput);
+                            if (!timedOut) {
+                                lastInput = new StringBuffer(readLine());
+                                System.out.println(lastInput);
+                            }
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
                         }
                     }
                     try {

@@ -4,6 +4,7 @@ import edu.wpi.first.wpilibj.CANJaguar;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.can.CANNotInitializedException;
 import edu.wpi.first.wpilibj.can.CANTimeoutException;
+import edu.wpi.first.wpilibj.RobotDrive;
 
 /**
  * This class runs the drive train for the robot
@@ -16,11 +17,11 @@ public class CANDrive {
     protected CANJaguar m_rearLeftMotor;
     protected CANJaguar m_frontRightMotor;
     protected CANJaguar m_rearRightMotor;
-    private Encoder rightEncoder;
-    private Encoder leftEncoder;
+    protected Encoder rightEncoder;
+    protected Encoder leftEncoder;
     private double deadBand;
     private boolean turbo = false;
-    private final double distPerTick = Math.PI / 1080;
+    private final double distPerTick = 0.05;//Math.PI / 1080;
     private final double pointDistPerDeg = Math.PI / 30;
     private final double wideDistPerDeg = Math.PI / 15;
     private double leftAutoDriveTarget;
@@ -38,7 +39,6 @@ public class CANDrive {
      * motor
      */
     public CANDrive(int frontLeft, int rearLeft, int frontRight, int rearRight, int ra, int rb, int la, int lb) {
-
         try {
             m_frontLeftMotor = new CANJaguar(frontLeft);    // initialize the jag running the front, left motor
             m_frontRightMotor = new CANJaguar(frontRight);  // initialize the jag running the front, right motor\
@@ -69,6 +69,8 @@ public class CANDrive {
         leftEncoder = new Encoder(la, lb);
         rightEncoder.setDistancePerPulse(distPerTick);
         leftEncoder.setDistancePerPulse(distPerTick);
+        rightEncoder.setReverseDirection(true);
+        
 
         deadBand = 0;   // default to having no deadspace from the controller inputs
     }
@@ -166,8 +168,8 @@ public class CANDrive {
      * @param scaleInputs whether to scale the inputs
      */
     public void tankDrive(double left, double right, boolean scaleInputs) {
-        left = limit(left);
-        right = -limit(right);
+        left = -limit(left);
+        right = limit(right);
 
         try {
             if (scaleInputs && m_frontRightMotor.getControlMode() == CANJaguar.ControlMode.kPercentVbus) {
@@ -245,10 +247,13 @@ public class CANDrive {
     }
 
     public boolean driveFeet(double dist, double speed) {
+        dist = Math.abs(dist);
+        speed = Math.abs(speed);
+        
         if (rightEncoder.getDistance() < dist) {
             try {
-                m_frontRightMotor.setX(speed, (byte) 0x09);
-                m_rearRightMotor.setX(speed, (byte) 0x09);
+                m_frontRightMotor.setX(-speed, (byte) 0x09);
+                m_rearRightMotor.setX(-speed, (byte) 0x09);
             } catch (CANTimeoutException ex) {
             }
         } else {
@@ -452,14 +457,15 @@ public class CANDrive {
         x = Math.abs(x);
 
         if (x >= .5) {
-            x = 1.3 * x - .3;
+            x = (1.3 * x) - .3;
+            if (!turbo) {
+                x *= .8;
+            }
         } else {
-            x = 1.4 * x * x;
+            x = 1.4 * (x * x);
         }
 
-        if (!turbo) {
-            x *= .8;
-        }
+        
 
         if (negative) {
             x *= -1;
